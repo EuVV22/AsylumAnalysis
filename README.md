@@ -7,4 +7,3 @@ This project presents the big picture reality of the asylum seekers throwout tim
 # Source 
 Population data:
 https://data.worldbank.org/indicator/SP.POP.TOTL
-
