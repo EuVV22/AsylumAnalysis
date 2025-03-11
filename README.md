@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Introduction
 This project presents the big picture reality of the asylum seekers throwout time and locations
 
