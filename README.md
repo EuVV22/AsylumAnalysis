@@ -1,12 +1,11 @@
-# Asylum analisis
+# Asylum seekers: During interantional migration crisis
 
-# Introduction
-This project presents the big picture reality of the asylum seekers throwout time and locations
+## Overview
 
+The repo is my capstone project for CODE:You. The project analyzes the asylum seekers, refugees and refugee like situation population to define, total numbers, countries of origin, countries of asylum and more. The goal of the project is to demonstrate a general knowledge of Python, Plotly.
 
 ## Data
 
-Data about asylum seekers
 Asylum flow data:
 - [Flow data](https://www.unhcr.org/refugee-statistics/insights/explainers/forcibly-displaced-flow-data.html)
 
@@ -16,13 +15,9 @@ Population data:
 Countries flags data:
 - [Countries flags data](https://www.kaggle.com/datasets/zhongtr0n/country-flag-urls?resource=download)
 
-
-images:
+## images:
 UNHCR logo https://freebiesupply.com/logos/unhcr-logo/
 World bank logo https://en.m.wikipedia.org/wiki/File:The_World_Bank_logo.svg
-Migrants image
-
-# How to run
 
 ### Project Structure
 ---
@@ -33,61 +28,36 @@ The project is organized as follows:
 
 - **Analysis:** Using Python with the  Pandas package to clean the data.
 
-- **Visualizations :** Using Matplotlib and Plotly to visualize my findings. 
+- **Visualizations :** Using Plotly to visualize my findings. 
 
-- **Dashboard:** Additionally generat of the data dashboard. [Tableau](https://public.tableau.com/app/discover/viz-of-the-day)
+- **Dashboard:** There are dashboards inveded in the jupyter notebook for better vizualization.
 
-
-
-
-
-# Data Analysis Project
-
-## Overview
-
-The project is my capstone project for CODE:You. The project analyzes sales data to gain insights into various factors, including item sales throughout their life cycles, top development factors, and more. The goal of the project is to demonstrate a general knowledge of Python, SQL, and Tableau.
-
-## Data
-
-The dataset used in this project contains information about sales, including details such as title, genre, publisher, developer, critic scores, total sales, and release dates.
-- [Data 1](https://kaggle.com)
-- [Data 2](https://kaggle.com)
-
-### Project Structure
----
-
-The project is organized as follows:
-
-- **Data Exploration:** Jupyter notebooks or scripts to explore the dataset.
-
-- **Analysis:** Using Python with the  Pandas package to clean the data.
-
-- **Visualizations :** Using Matplotlib and Plotly to visualize my findings. 
-
-- **Dashboard:** Additionally generat of the data dashboard. [Tableau](https://public.tableau.com/app/discover/viz-of-the-day)
 
 ## Features Utilized for the project
 
   | Feature        | Description                           |
   |----------------|---------------------------------------|
-  | Read TWO data files| Used 2 CSV files from kaggle          |
+  | Read TWO data files| Used one csv file and one xlsx          |
   | Clean your data and perform a pandas merge with your two data sets, then calculate some new values based on the new data set.      | Cleaned my data and merged them with pandas. The calculated stats from various data points |
-  | Make 3 matplotlib, and Plotly | Made various plots to show off my findings. |
-  | Make a Tableau dashboard      | Made a dashboard with my findings. [Tableau](https://public.tableau.com/app/discover/viz-of-the-day) |
+  | Make 3 matplotlib, and Plotly | Made various plots with Plotly to show off my findings. |
+  | Make a Tableau dashboard      | Made a dasboard with Dash inside the jupyter notebook |
   | Utilize a virtual environment      | Made a venv for this project to keep my computer clean. |
-  | Notate your code with markdown cells in Jupyter Notebook | Included in my code, you will find clear notes describing each code block. |
+  | Notate your code with markdown cells in Jupyter Notebook | Code is described with comments. |
 
 ## Getting Started
 
 To run this project, follow these steps:
 
-1. Clone the repository: `git clone https://github.com/your-username/your-project.git`
+1. Clone the repository: `git clone https://github.com/EuVV22/AsylumAnalysis`
 2. Install the necessary dependencies: `pip install -r requirements.txt`
 3. Explore the Jupyter notebooks or scripts in the respective folders.
 
 ## Dependencies
 
-List any dependencies or libraries used in the project.
+- Pandas
+- Plotly
+- Dash
+
 
 ###  Virtual Environment Instructions
 ---
