@@ -17,6 +17,11 @@ Countries flags data:
 - [Countries flags data](https://www.kaggle.com/datasets/zhongtr0n/country-flag-urls?resource=download)
 
 
+images:
+UNHCR logo https://freebiesupply.com/logos/unhcr-logo/
+World bank logo https://en.m.wikipedia.org/wiki/File:The_World_Bank_logo.svg
+Migrants image
+
 # How to run
 
 ### Project Structure
