@@ -10,6 +10,9 @@ population = pd.read_csv(".\\Data\\Clean\\Population_data.csv")
 
 
 def print_total_asylum_seekers():
+    """
+        Prints the total sum of all asylum seekers
+    """
     print(format(asylum['count'].sum(), ",d"))
 
 
@@ -45,9 +48,6 @@ def Peak_finder(data: pd.DataFrame):
         previous_value = row['count']
         previous_year = row['year']
 
-def yearly_data_asylum(df: pd.DataFrame) -> pd.DataFrame:
-    return df.groupby(['country_of_origin_name', 'year']).agg({'count': 'sum'}).reset_index()
-
 def only_the_top_for_year(df: pd.DataFrame, start_year: int, end_year: int) -> pd.DataFrame:
     """
         Compares the all the countries and change the name of the country to 'Other' if its less than the constant minimum value 
@@ -60,9 +60,6 @@ def only_the_top_for_year(df: pd.DataFrame, start_year: int, end_year: int) -> p
     """
     MINIMUN_PARTICIPATION = 0.05
     df = df[(start_year <= df['year']) & (df['year'] <= end_year)]
-    
-
-    
     years = df['year'].unique().tolist()
 
     for year in years:
@@ -78,6 +75,9 @@ def only_the_top_for_year(df: pd.DataFrame, start_year: int, end_year: int) -> p
     return df.groupby(['country_of_origin_name', 'year']).agg({'count': 'sum'}).reset_index()
 
 def Top_four_countries(df: pd.DataFrame) -> pd.DataFrame:
+    """
+        dep
+    """
     years = df['year'].unique().tolist()
 
     for year in years:
@@ -91,9 +91,6 @@ def Top_four_countries(df: pd.DataFrame) -> pd.DataFrame:
                 df.loc[(df['country_of_origin_name'] == country) & (df['year'] == year), 'country_of_origin_name'] = 'Other'
         df.loc[~df['country_of_origin_name'].isin(top_4['country_of_origin_name']), 'country_of_origin_name'] = 'Other'
     return df
-            
-def wrap(df: pd.DataFrame, start_year: int, end_year: int) -> pd.DataFrame:
-    return only_the_top_for_year(df, start_year, end_year)
 
 # Graph functions:
 
@@ -101,9 +98,16 @@ def Country_of_origin():
     as_by_country = asylum.groupby('country_of_origin_name').agg({'count' : 'sum'})
     as_by_country = as_by_country.sort_values('count', ascending=True).reset_index()
     as_by_country = as_by_country[as_by_country['count'] > 100_000]
-    fig = px.bar(as_by_country, y='country_of_origin_name', x='count', orientation='h')
+    fig = px.bar(as_by_country, y='country_of_origin_name', x='count', orientation='h', title="<b>Total asylum seekers by country of origin<b>",
+                 labels={'country_of_origin_name': '', 'count': 'Total asylum seekers'}
+                 )
     # TODO: Log scale
-    fig.update_layout(height=2000)
+    fig.update_layout(
+        height=2000,
+        title_x=0.5,
+    )
+    fig.update_traces(marker_color='#ad0b0b',)
+
     fig.show()
 
 def New_asylum_seekers_graph():
@@ -141,7 +145,7 @@ def New_asylum_seekers_graph():
     for peak in Peak_finder(timeline):
         fig.add_shape(type="rect",
                     x0=peak['start'], y0=0, x1=peak['end'], y1=10300000,
-                    fillcolor="tomato", opacity=0.5,
+                    fillcolor="#ad0b0b", opacity=0.5,
                     layer="below", line_width=0)
 
 
@@ -152,8 +156,8 @@ def New_asylum_seekers_graph():
     )
 
     fig.update_layout(
-        title='Total asylumn seeker population over the years (highlighted migration crisis)',
-        xaxis={'title': {'text': "Years"}, 'showgrid':False},
+        title='<b>Total asylumn seeker population over the years (highlighted migration crisis)<b>',
+        xaxis={'showgrid':False},
         yaxis={'title': {'text': 'Asylum Seekers'}, 'rangemode': 'tozero', 'showgrid':False}
     )
     fig.show()
@@ -210,3 +214,17 @@ def Dasher():
     # TODO: Agregado en el mapa
 
     app.run()
+
+def Destination_countries_graph():
+    # TODO: add better hover text with the principal countries that migrate to that country
+    destination_countries = asylum.groupby("country_of_asylum_abbr").agg({"count":'sum'}).reset_index().sort_values('count', ascending=False)
+    country_names = asylum[['country_of_asylum_abbr', 'country_of_asylum_name']]
+    country_names = country_names.drop_duplicates(subset=['country_of_asylum_abbr'], keep='first')
+    destination_countries = destination_countries.merge(country_names, how='inner', on='country_of_asylum_abbr')
+    fig = px.choropleth(destination_countries, locations="country_of_asylum_abbr", locationmode='ISO-3',
+                        color="count",
+                        color_continuous_scale="Reds",
+                        hover_name="country_of_asylum_name",
+                        projection="natural earth")
+
+    fig.show()
