@@ -275,7 +275,7 @@ def New_asylum_seekers_graph():
 
 
 
-def Dasher():
+def Migration_crisis_by_period_Dash():
     app = Dash(__name__)
 
     migration_crisis = list(Peak_finder(asylum.groupby('year').agg({'count': 'sum'}).reset_index()))
@@ -410,7 +410,7 @@ def Biggest_displacement_percentage_graph():
 
     fig.show()
 
-def Dasher2():
+def Specific_country_information_dash():
     """
         This function creates a Dash app that displays a choropleth map and a line chart of asylum seekers by country.
 
@@ -419,8 +419,9 @@ def Dasher2():
     """
     app2 = Dash(__name__)
 
-    countries = asylum[['country_of_origin_abbr', 'count']].groupby('country_of_origin_abbr').agg({'count': "sum"}).reset_index().sort_values('count', ascending=False)
-    options = countries['country_of_origin_abbr'].unique()
+    countries = asylum[['country_of_origin_name', 'count']].groupby('country_of_origin_name').agg({'count': "sum"}).reset_index().sort_values('count', ascending=False)
+    options = countries['country_of_origin_name'].unique()
+    country_names = asylum[['country_of_origin_abbr', 'country_of_origin_name']]
 
     app2.layout = html.Div([
         html.H2('Countries', style={'text-align': "center"}),
@@ -441,6 +442,7 @@ def Dasher2():
         Input("dropdown", "value"))
 
     def update_bar_chart(country):
+        country = country_names[country_names['country_of_origin_name'] == country]['country_of_origin_abbr'].values[0]
         final = Get_ready_for_plot_df(asylum, country)
         final_heat = final[final['cumulative_sum'] != 0]
 
@@ -468,7 +470,8 @@ def Dasher2():
         Input("dropdown", "value"))
 
     def update_line(country):
-        timeline = Get_total_country_migration_df(asylum, country)
+        country_iso = country_names[country_names['country_of_origin_name'] == country]['country_of_origin_abbr'].values[0]
+        timeline = Get_total_country_migration_df(asylum, country_iso)
         trace = go.Scatter(x=timeline['year'], y=timeline['count'])
         fig = go.Figure(trace)
 
