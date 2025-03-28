@@ -92,6 +92,36 @@ def Top_four_countries(df: pd.DataFrame) -> pd.DataFrame:
         df.loc[~df['country_of_origin_name'].isin(top_4['country_of_origin_name']), 'country_of_origin_name'] = 'Other'
     return df
 
+def Country_population_data(country_code: str, population_data: pd.DataFrame, asylum_data: pd.DataFrame) -> pd.DataFrame:
+    country_population = population_data[population_data["Country Code"] == country_code].drop(columns=["Country Name", "Country Code"]).transpose().reset_index()
+    country_population.columns = ['year', 'population']
+    country_population['year'] = country_population['year'].astype(int)
+
+    country = asylum_data[asylum_data["country_of_origin_abbr"] == country_code].groupby("year", as_index=False)["count"].sum()
+    
+    country = country.merge(right= country_population, how='left', on='year')
+    country.drop(country[country['population'].isna()].index, inplace=True)
+    country["percentage_of_population_migration"] = (country["count"] / country["population"]) * 100
+
+    country.rename(columns={'count': "displaced"}, inplace=True)
+    country["country_of_origin_abbr"] = country_code
+    return country
+
+def Get_country_population_df(pop, asy) -> pd.DataFrame:
+    countries = asy["country_of_origin_abbr"].unique()
+    countries_not_in_the_analysis = []
+    full_data = pd.DataFrame()
+    for country in countries:
+        if country in pop['Country Code'].values:
+            full_data = pd.concat([full_data, Country_population_data(country, population_data=pop, asylum_data=asy)])
+        else:
+            countries_not_in_the_analysis.append(asylum[asylum['country_of_origin_abbr'] == country]['country_of_origin_name'].iloc[0])
+        
+    # print('These countries were remove from the Dataframe due to not existing in the WorldBank population dataset:')
+    # print(countries_not_in_the_analysis)
+    return full_data
+
+
 # Graph functions:
 
 def Country_of_origin():
@@ -213,7 +243,7 @@ def Dasher():
 
     # TODO: Agregado en el mapa
 
-    app.run()
+    app.run(port=8052)
 
 def Destination_countries_graph():
     # TODO: add better hover text with the principal countries that migrate to that country
@@ -228,3 +258,166 @@ def Destination_countries_graph():
                         projection="natural earth")
 
     fig.show()
+
+
+def Biggest_displacement_percentage_graph():
+    data = Get_country_population_df(population, asylum).sort_values('percentage_of_population_migration', ascending=False)
+    country_names = asylum[['country_of_origin_abbr', 'country_of_origin_name']].drop_duplicates(subset=['country_of_origin_abbr'], keep='first')
+
+    destination_countries = data.merge(country_names, how='left', on='country_of_origin_abbr')
+    destination_countries = destination_countries[:20]
+
+    fig = go.Figure()
+    # Filter to show only the year with the highest percentage of population migration for each country
+    filtered_data = destination_countries.loc[
+        destination_countries.groupby('country_of_origin_name')['percentage_of_population_migration'].idxmax()
+    ].sort_values(by='percentage_of_population_migration', ascending=False)
+
+    fig.add_trace(
+        go.Bar(
+            x=filtered_data['country_of_origin_name'],
+            y=filtered_data['percentage_of_population_migration'],
+            hovertemplate="<b>%{x}</b><br>Year: %{customdata}<br>Percentage: %{y:.2f}%<extra></extra>",
+            marker=dict(color='#ad0b0b'),
+            customdata=filtered_data['year'], 
+            text=filtered_data['year'], 
+            textposition='outside' 
+        )
+    )
+
+    fig.update_layout(
+        title="<b>Top Countries by Percentage of Population Displaced (Highest Year per Country)</b>",
+        xaxis=dict(
+            title="<b>Country of Origin</b>",
+            tickangle=-45,
+            showgrid=False
+        ),
+        yaxis=dict(
+            title="<b>Percentage of Population Displaced</b>",
+            showgrid=True,
+            gridcolor='lightgrey'
+        ),
+        plot_bgcolor='white',
+        height=600,
+        margin=dict(t=50, b=150)
+    )
+
+    fig.show()
+
+
+def Get_Destination_by_year_df(df: pd.DataFrame, country_abbr: str) -> pd.DataFrame:
+    result = df[df['country_of_origin_abbr'] == country_abbr]
+    result = result.groupby(['year', 'country_of_asylum_abbr']).agg({'count' : 'sum'}).reset_index()
+    result['merge_column'] = result['country_of_asylum_abbr'] + result['year'].astype(str)
+    return result
+
+def Get_countries_and_years_df(df: pd.DataFrame) -> pd.DataFrame:
+    countries = df['country_of_asylum_abbr'].unique()
+    years = df['year'].unique()
+    result = pd.DataFrame(columns=["country", "year"])
+    for country in countries:
+        c_list = [country] * len(years)
+        country_list_df = pd.DataFrame({"country" : c_list, "year" : years})
+        result = pd.concat([result, country_list_df], ignore_index=True)
+    result['merge_column'] = result['country'] + result['year'].astype(str)
+    return result
+
+## TODO: For loop at group by with if statement
+
+
+def Merge_and_clean_df(destination_df: pd.DataFrame, years_df: pd.DataFrame) -> pd.DataFrame:
+    final = years_df.merge(destination_df, on='merge_column', how='left')
+    final[final['year_x'] != final['year_y']]
+    final = final.drop(columns=['year_y', 'merge_column', 'country_of_asylum_abbr'])
+    final = final.rename(columns={'year_x': 'year'})
+    final['count'] = final['count'].fillna(0)
+    final['cumulative_sum'] = final.groupby('country')['count'].cumsum()
+    return final
+
+def Get_ready_for_plot_df(df: pd.DataFrame, country_of_origin_abbr: str) -> pd.DataFrame:
+    destination = Get_Destination_by_year_df(df, country_of_origin_abbr)
+    yearly = Get_countries_and_years_df(destination)
+    return Merge_and_clean_df(destination, yearly)    
+
+def Get_total_country_migration_df(df: pd.DataFrame, country_of_origin_abbr: str) -> pd.DataFrame:
+    return df[df['country_of_origin_abbr'] == country_of_origin_abbr].groupby('year').agg({'count' : 'sum'}).reset_index()
+
+def Dasher2():
+    """
+        This function creates a Dash app that displays a choropleth map and a line chart of asylum seekers by country.
+
+        Returns:
+            None
+    """
+    app2 = Dash(__name__)
+
+    countries = asylum[['country_of_origin_abbr', 'count']].groupby('country_of_origin_abbr').agg({'count': "sum"}).reset_index().sort_values('count', ascending=False)
+    options = countries['country_of_origin_abbr'].unique()
+
+    app2.layout = html.Div([
+        html.H2('Countries', style={'text-align': "center"}),
+        html.P('Select country:'),
+        dcc.Dropdown(
+            id="dropdown",
+            options=options,
+            value=options[0],
+            clearable=False,
+        ),
+        dcc.Graph(id="line"),
+        dcc.Graph(id="graph"),
+        
+    ], style={'backgroundColor':'white'})
+
+    @app2.callback(
+        Output("graph", "figure"),
+        Input("dropdown", "value"))
+
+    def update_bar_chart(country):
+        final = Get_ready_for_plot_df(asylum, country)
+        final_heat = final[final['cumulative_sum'] != 0]
+
+        fig = px.choropleth(final_heat, locations="country", locationmode='ISO-3',
+                            color="cumulative_sum",
+                            color_continuous_scale="Reds",
+                            hover_name="country",
+                            animation_frame="year",
+                            projection="natural earth")
+        country_to_highlight = "USA"
+        fig.add_trace(
+            go.Choropleth(
+                locations=[country],
+                z=[1],
+                colorscale=[[0, "green"], [1, "green"]],  
+                showscale=False,
+                hovertemplate="%{location}"
+            )
+        )
+
+        return fig
+
+    @app2.callback(
+        Output("line", "figure"),
+        Input("dropdown", "value"))
+
+    def update_line(country):
+        timeline = Get_total_country_migration_df(asylum, country)
+        trace = go.Scatter(x=timeline['year'], y=timeline['count'])
+        fig = go.Figure(trace)
+
+        for peak in Peak_finder(timeline):
+            fig.add_shape(type="rect",
+                        x0=peak['start'], y0=0, x1=peak['end'], y1=timeline['count'].max(),
+                        fillcolor="tomato", opacity=0.5,
+                        layer="below", line_width=0)
+
+        fig.update_layout(
+            title=f'Total {country} asylum seeker population over the years (highlighted migration crisis)',
+            xaxis={'title': {'text': "Years"}, 'showgrid':False},
+            yaxis={'title': {'text': 'Asylum Seekers'}, 'rangemode': 'tozero', 'showgrid':False}
+        )
+
+        return fig
+
+
+
+    app2.run(port=8053)
