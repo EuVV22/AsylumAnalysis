@@ -3,6 +3,6 @@ notes.txt
 venv/
 __pycache__/
 tester.ipynb
-Data\Raw\API_SP.POP.TOTL_DS2_en_csv_v2_87.csv
-Data\Raw\flags_iso.csv
-Data\Raw\UNHCR_Flow_Data.xlsx
+Data/Clean/Asylum_data.csv
+Data/Clean/Flags.csv
+Data/Clean/Population_data.csv
