@@ -8,46 +8,7 @@ from dash import Dash, dcc, html, Input, Output
 asylum = pd.read_csv('.\\Data\\Clean\\Asylum_data.csv')
 population = pd.read_csv(".\\Data\\Clean\\Population_data.csv")
 
-
-def print_total_asylum_seekers():
-    """
-        Prints the total sum of all asylum seekers
-    """
-    print(format(asylum['count'].sum(), ",d"))
-
-
-def Peak_finder(data: pd.DataFrame):
-    """
-        This function finds peak in the data and then returns the starting and the finishing years of the peak
-
-        Function type: Generator
-
-        Args: data (pandas.DataFrame): dataframe that contains a year series and a numerical value to check for peaks
-
-        Yields: dictionary with two values 'start' (int), 'end'(int) representing the start and end year for each peak
-    """
-    percentaje_to_check = 0.5
-    previous_value = data['count'][0]
-    previous_year = data['year'][0]
-
-    inside_peak = False
-    current_highlight = {}
-    # Start of the highlight:
-    for index, row in data.iterrows():
-        if not inside_peak:
-            if previous_value > 1000:
-                if (row['count'] - previous_value) > (previous_value * percentaje_to_check):
-                    current_highlight = {'start': previous_year, 'end': 0}
-                    inside_peak = True
-        else:
-            if (row['count']) <= (previous_value):
-                current_highlight['end'] = row['year']
-                yield current_highlight
-                inside_peak = False
-                current_highlight = {}
-        previous_value = row['count']
-        previous_year = row['year']
-
+# Data class
 def only_the_top_for_year(df: pd.DataFrame, start_year: int, end_year: int) -> pd.DataFrame:
     """
         Compares the all the countries and change the name of the country to 'Other' if its less than the constant minimum value 
@@ -74,6 +35,7 @@ def only_the_top_for_year(df: pd.DataFrame, start_year: int, end_year: int) -> p
     
     return df.groupby(['country_of_origin_name', 'year']).agg({'count': 'sum'}).reset_index()
 
+# Data class
 def Top_four_countries(df: pd.DataFrame) -> pd.DataFrame:
     """
         dep
@@ -92,6 +54,7 @@ def Top_four_countries(df: pd.DataFrame) -> pd.DataFrame:
         df.loc[~df['country_of_origin_name'].isin(top_4['country_of_origin_name']), 'country_of_origin_name'] = 'Other'
     return df
 
+# Data class
 def Country_population_data(country_code: str, population_data: pd.DataFrame, asylum_data: pd.DataFrame) -> pd.DataFrame:
     country_population = population_data[population_data["Country Code"] == country_code].drop(columns=["Country Name", "Country Code"]).transpose().reset_index()
     country_population.columns = ['year', 'population']
@@ -107,6 +70,7 @@ def Country_population_data(country_code: str, population_data: pd.DataFrame, as
     country["country_of_origin_abbr"] = country_code
     return country
 
+# Data class
 def Get_country_population_df(pop, asy) -> pd.DataFrame:
     countries = asy["country_of_origin_abbr"].unique()
     countries_not_in_the_analysis = []
@@ -121,12 +85,14 @@ def Get_country_population_df(pop, asy) -> pd.DataFrame:
     # print(countries_not_in_the_analysis)
     return full_data
 
+# Data class
 def Get_Destination_by_year_df(df: pd.DataFrame, country_abbr: str) -> pd.DataFrame:
     result = df[df['country_of_origin_abbr'] == country_abbr]
     result = result.groupby(['year', 'country_of_asylum_abbr']).agg({'count' : 'sum'}).reset_index()
     result['merge_column'] = result['country_of_asylum_abbr'] + result['year'].astype(str)
     return result
 
+# Data class
 def Get_countries_and_years_df(df: pd.DataFrame) -> pd.DataFrame:
     countries = df['country_of_asylum_abbr'].unique()
     years = df['year'].unique()
@@ -159,6 +125,45 @@ def Get_total_country_migration_df(df: pd.DataFrame, country_of_origin_abbr: str
 
 
 # Graph functions:
+
+def print_total_asylum_seekers():
+    """
+        Prints the total sum of all asylum seekers
+    """
+    print(format(asylum['count'].sum(), ",d"))
+
+# Visualization class
+def Peak_finder(data: pd.DataFrame):
+    """
+        This function finds peak in the data and then returns the starting and the finishing years of the peak
+
+        Function type: Generator
+
+        Args: data (pandas.DataFrame): dataframe that contains a year series and a numerical value to check for peaks
+
+        Yields: dictionary with two values 'start' (int), 'end'(int) representing the start and end year for each peak
+    """
+    percentaje_to_check = 0.5
+    previous_value = data['count'][0]
+    previous_year = data['year'][0]
+
+    inside_peak = False
+    current_highlight = {}
+    # Start of the highlight:
+    for index, row in data.iterrows():
+        if not inside_peak:
+            if previous_value > 1000:
+                if (row['count'] - previous_value) > (previous_value * percentaje_to_check):
+                    current_highlight = {'start': previous_year, 'end': 0}
+                    inside_peak = True
+        else:
+            if (row['count']) <= (previous_value):
+                current_highlight['end'] = row['year']
+                yield current_highlight
+                inside_peak = False
+                current_highlight = {}
+        previous_value = row['count']
+        previous_year = row['year']
 
 def Country_of_origin():
     as_by_country = asylum.groupby('country_of_origin_name').agg({'count': 'sum'})
