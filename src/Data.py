@@ -1,6 +1,10 @@
 import pandas as pd
+import timeit
+from timing.CaptureReturnValue import CaptureReturnValue as capture
 
 class Data:
+    time_df = {'df_and_text' : [], 'inverse_df': [], 'text': []}
+
     def __init__(self):
         self.asylum_data = pd.read_csv('.\\Data\\Clean\\Asylum_data.csv')
         self.population_data = pd.read_csv(".\\Data\\Clean\\Population_data.csv")
@@ -22,10 +26,18 @@ class Data:
         self.abbr_dict['FSM'] = 'Micronesia'
 
 
-
-
     @staticmethod
     def Peak_finder(data: pd.DataFrame):
+        """
+            Finds all the years in which the increment is higher than the level set by CRISIS_INCREMENT_ALERT
+
+            Args:
+                data (pandas.DataFrame): that has a year series and a count series
+
+            Returns:
+                Generator, yields a dic structure {'start': int, 'end': int}
+        """
+
         MINIMUN_CONSIDERATION_VALUE = 1_000
         CRISIS_INCREMENT_ALERT = 0.5 # Increments higher than this % are consider crisis
         previous_value = data['count'][0]
@@ -33,6 +45,7 @@ class Data:
 
         inside_peak = False
         current_highlight = {}
+        data = data.sort_values('year')
         # Start of the highlight:
         for index, row in data.iterrows():
             if not inside_peak:
@@ -136,7 +149,10 @@ class Data:
     def Get_ready_for_plot_df(self, country_of_origin_abbr: str) -> pd.DataFrame:
         destination = self.Get_Destination_by_year_df(country_of_origin_abbr)
         yearly = self.Get_countries_and_years_df(destination)
-        return self.Merge_and_clean_df(destination, yearly)    
+        combined = self.Merge_and_clean_df(destination, yearly)
+        combined['country_name'] = combined['country'].map(self.abbr_dict)
+        combined['hover_text'] = combined['country_name'] + ': ' + combined['cumulative_sum'].astype(str)
+        return combined   
     
     # Same but different
     @staticmethod
@@ -150,8 +166,16 @@ class Data:
             result = pd.concat([result, country_list_df], ignore_index=True)
         return result
     
-    def Add_hover_text(self, df: pd.DataFrame, type: str) -> pd.DataFrame:
-        if type == 'origin':
+    """
+        How to test time in hovertext
+        testing 'add_hover_text' will yield the time of the loop + adding to a dataframe
+        testint the series creation will text the time of the dataframe creation +  text implementation
+        texting dataframe creation
+        testing text creation
+    """
+    
+    def Add_hover_text(self, df: pd.DataFrame, analisis_type: str) -> pd.DataFrame:
+        if analisis_type == 'origin':
             COLUMN_NAME = 'country_of_asylum_name'
             result_countries = 'destination'
             TOTAL_DESCRIPTION = 'Displaced population:'
@@ -159,27 +183,56 @@ class Data:
             COLUMN_NAME = 'country_of_origin_name'
             result_countries = 'origin'
             TOTAL_DESCRIPTION = 'Asylum seekers received:'
+
+
         r = df
         result = pd.DataFrame({'hover_text': []})
         for row in r.itertuples(): # TODO: try writing this in vectorization to be more efficient
-            country = row.country # country of destionation or origin
-            # gets all the times that country has been use as origin or destination
-            specific_type_df = self.asylum_data[self.asylum_data['country_of_' + type + '_abbr'] == country]
-            specific_type_df = specific_type_df[specific_type_df['year'] <= row.year] # selects the year as the maximun year
-            specific_type_df = specific_type_df.groupby([COLUMN_NAME]).agg({'count': 'sum'}).reset_index() # sums all the users
-            specific_type_df = specific_type_df.sort_values('count', ascending=False)# this first part can be precomputed before the loop starts
+            text = capture(self.text_creation)
+            self.time_df['df_and_text'].append(timeit.timeit(lambda: text(row, COLUMN_NAME, TOTAL_DESCRIPTION, result_countries, analisis_type), number=1))
+            result.loc[row[0]] = [text.return_value]
 
-            hover_text = f'''<b>{self.abbr_dict[country]}<br>{TOTAL_DESCRIPTION} {int(row.cumulative_sum):,}<br><br>Top {result_countries} countries:</b><br>'''
-            MAX_DISPLAY_COUNTRIES = 5
-            number_of_countries_to_display =  MAX_DISPLAY_COUNTRIES if len(specific_type_df) >= MAX_DISPLAY_COUNTRIES else len(specific_type_df)
-            i = 0
-            while i < number_of_countries_to_display:
-                hover_text += f'{specific_type_df.iloc[i][COLUMN_NAME]}: {specific_type_df.iloc[i]['count']:,}<br>'
-                i += 1
-            result.loc[row[0]] = [hover_text]    
-        return result    
+            # result.loc[row[0]] = self.text_creation(row, COLUMN_NAME, TOTAL_DESCRIPTION, result_countries, analisis_type)
+        return result   
 
-    def Destionation_or_origin_by_year(self, type: str) -> pd.DataFrame:
+    def text_creation(self, row: tuple, COLUMN_NAME: str, TOTAL_DESCRIPTION: str, result_countries: str, analisis_type: str) -> str:
+        country = row.country # country of destionation or origin
+        # gets all the times that country has been use as origin or destination
+        inverse_df = capture(self.inverse_df_result)
+        self.time_df['inverse_df'].append(timeit.timeit(lambda: inverse_df(row, COLUMN_NAME, analisis_type, country), number=1))
+        specific_type_df = inverse_df.return_value
+
+        # specific_type_df = self.inverse_df_result(row, COLUMN_NAME, analisis_type, country)
+
+        typer_machine = capture(self.typer)
+        self.time_df['text'].append(timeit.timeit(lambda: typer_machine(country, TOTAL_DESCRIPTION, result_countries, analisis_type, COLUMN_NAME, specific_type_df, row), number=1))
+        return typer_machine.return_value
+        # return self.typer(country, TOTAL_DESCRIPTION, result_countries, analisis_type, COLUMN_NAME, specific_type_df, row)
+    
+    def inverse_df_result(self, row: tuple, COLUMN_NAME: str, analisis_type: str, country: str) -> pd.DataFrame:
+        # lets extract this outside the loop.
+
+        # working code
+        # is it better to compute this before the loop and hold more ram or compute during the loop?
+        specific_type_df = self.asylum_data[self.asylum_data['country_of_' + analisis_type + '_abbr'] == country]
+        specific_type_df = specific_type_df[specific_type_df['year'] <= row.year] # selects the year as the maximun year
+        specific_type_df = specific_type_df.groupby([COLUMN_NAME]).agg({'count': 'sum'}).reset_index() # sums all the users
+        specific_type_df = specific_type_df.sort_values('count', ascending=False) # this first part can be precomputed before the loop starts
+
+        return specific_type_df
+    
+    def typer(self, country: str, TOTAL_DESCRIPTION: str, result_countries: str, analisis_type: str, COLUMN_NAME: str, specific_type_df: pd.DataFrame, row: tuple) -> str:
+        hover_text = f'''<b>{self.abbr_dict[country]}<br>{TOTAL_DESCRIPTION} {int(row.cumulative_sum):,}<br><br>Top {result_countries} countries:</b><br>'''
+        MAX_DISPLAY_COUNTRIES = 5
+        number_of_countries_to_display =  MAX_DISPLAY_COUNTRIES if len(specific_type_df) >= MAX_DISPLAY_COUNTRIES else len(specific_type_df)
+        i = 0
+        while i < number_of_countries_to_display:
+            hover_text += f'{specific_type_df.iloc[i][COLUMN_NAME]}: {specific_type_df.iloc[i]['count']:,}<br>'
+            i += 1
+
+        return hover_text
+
+    def Destination_or_origin_by_year(self, type: str) -> pd.DataFrame:
         # prepares data
         TARGET_TYPE_COLUNM = 'country_of_' + type +'_abbr'
         df_with_total_by_year = self.asylum_data.groupby(['year', TARGET_TYPE_COLUNM]).agg({'count' : 'sum'}).reset_index()
@@ -227,6 +280,7 @@ class Data:
         destination_countries = destination_countries[:AMOUNT_OF_COUNTRIES]
         # Filter to show only the year with the highest percentage of population migration for each country
         filtered_data = destination_countries.loc[
-            destination_countries.groupby('country_of_origin_name')['percentage_of_population_migration'].idxmax()
+            destination_countries.groupby('country_of_origin_abbr')['percentage_of_population_migration'].idxmax()
         ].sort_values(by='percentage_of_population_migration', ascending=False)
+        filtered_data['country_of_origin_abbr'] = filtered_data['country_of_origin_abbr'].map(self.abbr_dict)
         return filtered_data

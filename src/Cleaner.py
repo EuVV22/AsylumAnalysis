@@ -55,7 +55,7 @@ class Cleaner:
         return data_nn
     
     @staticmethod
-    def Output_asylum_clean_data(self, source_path: str) -> None:
+    def Output_asylum_seekers_clean_data(self, source_path: str) -> None:
         clean_data_asylum = self.__Asylum_data_cleaner(source_path)
         clean_data_asylum.to_csv(f"{self.__output_folder}Asylum_data.csv", index=False)
 

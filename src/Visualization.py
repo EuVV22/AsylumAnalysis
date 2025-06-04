@@ -3,7 +3,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from dash import Dash, dcc, html, Input, Output
-from Data import Data as data_class
+from .Data import Data as data_class
 
 class Visualization:
     __data = data_class()
@@ -20,9 +20,9 @@ class Visualization:
 
             Return: Plotly figure
         """
-        minimum_asylum_seekers = 100_000
+        MINIMUM_ASYLUM_SEEKERS = 100_000
         as_by_country = self.__data.Get_origin_country_total()
-        as_by_country = as_by_country[as_by_country['count'] > minimum_asylum_seekers]
+        as_by_country = as_by_country[as_by_country['count'] > MINIMUM_ASYLUM_SEEKERS]
         
         fig = px.bar(
             as_by_country,
@@ -134,7 +134,6 @@ class Visualization:
                             color_continuous_scale="Reds",
                             hover_name="country_of_asylum_name",
                             projection="natural earth")
-
         return fig 
 
 
@@ -143,7 +142,7 @@ class Visualization:
         fig = go.Figure()
         fig.add_trace(
             go.Bar(
-                x=destination_countries['country_of_origin_name'],
+                x=destination_countries['country_of_origin_abbr'],
                 y=destination_countries['percentage_of_population_migration'],
                 hovertemplate="<b>%{x}</b><br>Year: %{customdata}<br>Percentage: %{y:.2f}%<extra></extra>",
                 marker=dict(color='#ad0b0b'),
@@ -300,6 +299,7 @@ class Visualization:
                                 animation_frame="year",
                                 projection="natural earth")
             country_to_highlight = "USA"
+
             fig.add_trace(
                 go.Choropleth(
                     locations=[country],
@@ -310,7 +310,13 @@ class Visualization:
                 )
             )
             fig.update_layout(
-                title=f'<b>Destination Countries of Asylum Seekers Originating from {name}<b>'
+                title=f'<b>Destination Countries of Asylum Seekers Originating from {name}<b>',
+                title_x=0.5,
+                title_font=dict(size=18, color='black'),
+                
+                coloraxis_colorbar=dict(
+                    title="Asylum seekers"
+                )
             )
             fig.update_layout(
                 geo={'landcolor' : "#FFFFFF"}
@@ -325,7 +331,11 @@ class Visualization:
         def update_line(country):
             country_iso = country_names[country_names['country_of_origin_name'] == country]['country_of_origin_abbr'].values[0]
             timeline = self.__data.Get_total_country_migration_df(country_iso)
-            trace = go.Scatter(x=timeline['year'], y=timeline['count'])
+            trace = go.Scatter(x=timeline['year'], y=timeline['count'], mode='lines+markers',
+            line=dict(color='#1f77b4', width=2),
+            marker=dict(size=6, color='#ff7f0e'),
+            name='Total Asylum Seekers')
+
             fig = go.Figure(trace)
 
             for peak in self.__data.Peak_finder(timeline):
@@ -338,6 +348,28 @@ class Visualization:
                 title=f'<b>Total Asylum Seekers from {country} by Year (Highlighted Migration crisis)<b>',
                 xaxis={'title': {'text': "Years"}, 'showgrid':False},
                 yaxis={'title': {'text': 'Asylum Seekers'}, 'rangemode': 'tozero', 'showgrid':False}
+            )
+            fig.update_layout(
+                title_x=0.5,
+                title_font=dict(size=18, color='black'),
+                xaxis=dict(
+                    title="<b>Year</b>",
+                    showgrid=True,
+                    gridcolor='lightgrey',
+                    zeroline=False,
+                ),
+                yaxis=dict(
+                    title="<b>Asylum Seekers</b>",
+                    showgrid=True,
+                    gridcolor='lightgrey',
+                    rangemode='tozero'
+                ),
+                plot_bgcolor='white',
+                hoverlabel=dict(
+                    bgcolor="white",
+                    font_size=12,
+                    font_family="Arial"
+                ),
             )
 
             return fig
@@ -434,12 +466,12 @@ class Visualization:
         return frames
 
 
-    def ploty(self):
-        origin_df = self.__data.Destionation_or_origin_by_year('origin')
-        destination_df = self.__data.Destionation_or_origin_by_year('asylum')
+    def Get_origin_and_destination_graphs(self):
+        origin_df = self.__data.Destination_or_origin_by_year('origin')
+        destination_df = self.__data.Destination_or_origin_by_year('asylum')
 
         fig = make_subplots(rows=1, cols=2, subplot_titles=('<b>Countries of origin</b>', '<b>Countries of destination</b>'),
-                            specs=[[{'type': 'choropleth'}, {'type': 'choropleth'}]])
+                            specs=[[{'type': 'choropleth'}, {'type': 'choropleth'}]], horizontal_spacing=0.01)
 
         # Initial traces
         initial_year = origin_df['year'].min()
@@ -484,7 +516,7 @@ class Visualization:
         fig.layout.width = None
         fig.layout.height = None
         fig.update_layout(
-            coloraxis1=dict(colorscale='Reds', colorbar_x=-0.07),
-            coloraxis2=dict(colorscale='Blues', colorbar_x=1.0075)
+            coloraxis1=dict(colorscale='Reds', colorbar_x=-0.017),
+            coloraxis2=dict(colorscale='Blues', colorbar_x=0.95) #1.0075
         )
         return fig
