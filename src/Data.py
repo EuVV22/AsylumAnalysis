@@ -54,7 +54,7 @@ class Data:
                         current_highlight = {'start': previous_year, 'end': 0}
                         inside_peak = True
             else:
-                if (row['count']) <= (previous_value):
+                if (row['count']) < (previous_value):
                     current_highlight['end'] = row['year']
                     yield current_highlight
                     inside_peak = False
