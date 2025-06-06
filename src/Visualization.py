@@ -204,7 +204,7 @@ class Visualization:
         def update_bar_chart(years):
             years = years.split('-')
             fig = go.Figure()
-            period_data = self.__data.only_the_top_for_year(int(years[0]), int(years[1])).sort_values('count')
+            period_data = self.__data.top_origin_countries_yearly(int(years[0]), int(years[1])).sort_values('count')
             g = period_data.groupby('country_of_origin_name')
             for country, data in g:
                 custom = [

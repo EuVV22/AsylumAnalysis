@@ -63,15 +63,16 @@ class Data:
             previous_year = row['year']
 
 
-    def only_the_top_for_year(self, start_year: int, end_year: int) -> pd.DataFrame:
+    def top_origin_countries_yearly(self, start_year: int, end_year: int) -> pd.DataFrame:
         """
             Compares the all the countries and change the name of the country to 'Other' if its less than the constant minimum value 
 
             Args:
-                df (pandas.DataFrame): the DataFrame to work on
+                start_year (int): starting year of the period
+                end_year (int): ending year of the period
 
             Returns:
-                pandas.DataFrame with the values changed.
+                pandas.DataFrame with total migration contributing countries per year.
         """
         MINIMUN_PARTICIPATION = 0.05
         df = self.asylum_data[(start_year <= self.asylum_data['year']) & (self.asylum_data['year'] <= end_year)]
@@ -91,6 +92,15 @@ class Data:
         return df.groupby(['country_of_origin_name', 'year']).agg({'count': 'sum'}).reset_index()
 
     def Country_population_data(self, country_code: str) -> pd.DataFrame:
+        """
+            Gets country specific Dataframe with a timeline of the year population
+
+            Args:
+                country_code (str): ISO-3 country code.
+            
+            Return:
+                pandas.DataFrame with year and population
+        """
         country_population = self.population_data[self.population_data["Country Code"] == country_code].drop(columns=["Country Name", "Country Code"]).transpose().reset_index()
         country_population.columns = ['year', 'population']
         country_population['year'] = country_population['year'].astype(int)
@@ -106,6 +116,12 @@ class Data:
         return country
 
     def Get_country_population_df(self) -> pd.DataFrame:
+        """
+            Gets dataframe with the population for each country by year
+            
+            Returns:
+                pandas.DataFrame with year and population
+        """
         countries = self.asylum_data["country_of_origin_abbr"].unique()
         countries_not_in_the_analysis = []
         full_data = pd.DataFrame()
@@ -117,7 +133,16 @@ class Data:
                 countries_not_in_the_analysis.append(self.asylum_data[self.asylum_data['country_of_origin_abbr'] == country]['country_of_origin_name'].iloc[0])
         return full_data
 
-    def Get_Destination_by_year_df(self, country_abbr: str) -> pd.DataFrame:
+    def Get_destination_by_year(self, country_abbr: str) -> pd.DataFrame:
+        """
+            Returns a Dataframe that shows the destination of a specific country migration
+
+            Args:
+                country_abbr (str): ISO-3 country code.
+            
+            Return:
+                pandas.DataFrame with year and population
+        """
         result = self.asylum_data[self.asylum_data['country_of_origin_abbr'] == country_abbr]
         result = result.groupby(['year', 'country_of_asylum_abbr']).agg({'count' : 'sum'}).reset_index()
         result['merge_column'] = result['country_of_asylum_abbr'] + result['year'].astype(str)
@@ -147,7 +172,7 @@ class Data:
         return final
 
     def Get_ready_for_plot_df(self, country_of_origin_abbr: str) -> pd.DataFrame:
-        destination = self.Get_Destination_by_year_df(country_of_origin_abbr)
+        destination = self.Get_destination_by_year(country_of_origin_abbr)
         yearly = self.Get_countries_and_years_df(destination)
         combined = self.Merge_and_clean_df(destination, yearly)
         combined['country_name'] = combined['country'].map(self.abbr_dict)
