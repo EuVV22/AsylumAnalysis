@@ -141,7 +141,7 @@ class Data:
                 country_abbr (str): ISO-3 country code.
             
             Return:
-                pandas.DataFrame with year and population
+                pandas.DataFrame with year, population and adds a 'merge_column' with 'country_of_asylum_abbr' + 'year'
         """
         result = self.asylum_data[self.asylum_data['country_of_origin_abbr'] == country_abbr]
         result = result.groupby(['year', 'country_of_asylum_abbr']).agg({'count' : 'sum'}).reset_index()
@@ -150,6 +150,16 @@ class Data:
 
     @staticmethod
     def Get_countries_and_years_df(df: pd.DataFrame) -> pd.DataFrame:
+        """
+            Takes a DataFrame with country_of_asylum_abbr and year, gerates a record for each year for each country, also adds a 'merge_column' with 'country_of_asylum_abbr' + 'year'
+
+            Args:
+                df (pandas.DataFrame): DataFrame with country_of_asylum_abbr and year)
+            
+            Return:
+                pandas.DataFrame with year, population and merge_column
+
+        """
         countries = df['country_of_asylum_abbr'].unique()
         years = df['year'].unique()
         result = pd.DataFrame(columns=["country", "year"])
@@ -163,33 +173,43 @@ class Data:
     ## TODO: For loop at group by with if statement
     @staticmethod
     def Merge_and_clean_df(destination_df: pd.DataFrame, years_df: pd.DataFrame) -> pd.DataFrame:
+        """
+            Merges and cleans the dataframes
+
+            Args:
+                destination_df (pandas.DataFrame): DataFrame with country_of_asylum_abbr, year and merge_column)
+                years_df (pandas.DataFrame): DataFrame with year)
+
+            Return:
+                pandas.DataFrame with 
+
+        """
+
         final = years_df.merge(destination_df, on='merge_column', how='left')
         final[final['year_x'] != final['year_y']]
         final = final.drop(columns=['year_y', 'merge_column', 'country_of_asylum_abbr'])
         final = final.rename(columns={'year_x': 'year'})
         final['count'] = final['count'].fillna(0)
+        final['count'] = final['count'].astype(int)
         final['cumulative_sum'] = final.groupby('country')['count'].cumsum()
         return final
 
     def Get_ready_for_plot_df(self, country_of_origin_abbr: str) -> pd.DataFrame:
+        """
+            Returns a Dataframe with all the destionations of a specific country_of_origin
+
+            Args:
+                country_of_origin_abbr (str): ISO-3 country code.
+            
+            Return:
+                pandas.DataFrame with country, year, count, cumulative_sum and hover_text
+        """
         destination = self.Get_destination_by_year(country_of_origin_abbr)
         yearly = self.Get_countries_and_years_df(destination)
         combined = self.Merge_and_clean_df(destination, yearly)
         combined['country_name'] = combined['country'].map(self.abbr_dict)
         combined['hover_text'] = combined['country_name'] + ': ' + combined['cumulative_sum'].astype(str)
         return combined   
-    
-    # Same but different
-    @staticmethod
-    def Get_df_with_a_year_per_country(df: pd.DataFrame) -> pd.DataFrame:
-        countries = df['country'].unique()
-        years = df['year'].unique()
-        result = pd.DataFrame(columns=["country", "year"])
-        for country in countries:
-            c_list = [country] * len(years)
-            country_list_df = pd.DataFrame({"country" : c_list, "year" : years})
-            result = pd.concat([result, country_list_df], ignore_index=True)
-        return result
     
     """
         How to test time in hovertext
@@ -208,7 +228,6 @@ class Data:
             COLUMN_NAME = 'country_of_origin_name'
             result_countries = 'origin'
             TOTAL_DESCRIPTION = 'Asylum seekers received:'
-
 
         r = df
         result = pd.DataFrame({'hover_text': []})
@@ -256,6 +275,28 @@ class Data:
             i += 1
 
         return hover_text
+
+     # Same but different
+    @staticmethod
+    def Get_df_with_a_year_per_country(df: pd.DataFrame) -> pd.DataFrame:
+        """
+            Takes a DataFrame with country and year, gerates a record for each year for each country
+
+            Args:
+                df (pandas.DataFrame): DataFrame with country and year)
+            
+            Return:
+                pandas.DataFrame with year, population and merge_column
+
+        """
+        countries = df['country'].unique()
+        years = df['year'].unique()
+        result = pd.DataFrame(columns=["country", "year"])
+        for country in countries:
+            c_list = [country] * len(years)
+            country_list_df = pd.DataFrame({"country" : c_list, "year" : years})
+            result = pd.concat([result, country_list_df], ignore_index=True)
+        return result
 
     def Destination_or_origin_by_year(self, type: str) -> pd.DataFrame:
         # prepares data
